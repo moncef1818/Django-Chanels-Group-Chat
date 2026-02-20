@@ -1,245 +1,154 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ room_name }} — Al-Ta3adodya</title>
+    <title>{{ room_name }} — التعاضديت</title>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    {% load static %}
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
         :root {
-            --bg: #0a0a0f;
-            --surface: #13131a;
-            --surface2: #1c1c27;
-            --border: #2a2a3d;
-            --accent: #7c6aff;
-            --accent2: #ff6a9a;
-            --text: #e8e8f0;
-            --muted: #6b6b8a;
-            --bubble-out: #7c6aff;
-            --bubble-in: #1c1c27;
+            --bg: #051a1a; --surface: #0a2a2a; --surface2: #0f3535;
+            --border: #1a5050; --accent: #2a9d8f; --accent2: #4cc9b0;
+            --accent3: #1a7a6e; --text: #e0f5f2; --muted: #5a9e96;
         }
-
         body {
-            background: var(--bg);
-            color: var(--text);
+            background: var(--bg); color: var(--text);
             font-family: 'DM Sans', sans-serif;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
         }
 
-        /* ── Header ── */
+        /* Header */
         .header {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 16px 24px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 24px;
+            background: var(--surface); border-bottom: 1px solid var(--border);
             flex-shrink: 0;
         }
-
         .room-avatar {
-            width: 46px; height: 46px;
-            border-radius: 14px;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            flex-shrink: 0;
-        }
-
-        .room-info { flex: 1; }
-
-        .room-name {
-            font-family: 'Syne', sans-serif;
-            font-weight: 700;
-            font-size: 17px;
-            letter-spacing: -0.3px;
-            text-transform: capitalize;
-        }
-
-        .room-status {
-            font-size: 12px;
-            color: var(--muted);
-            margin-top: 2px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .online-dot {
-            width: 7px; height: 7px;
-            background: #4ade80;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-
-        .you-badge {
-            margin-left: auto;
+            width: 46px; height: 46px; border-radius: 13px; overflow: hidden;
+            border: 2px solid var(--accent); flex-shrink: 0;
             background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 6px 14px;
-            font-size: 13px;
-            color: var(--muted);
         }
-
-        .you-badge span {
-            color: var(--text);
-            font-weight: 500;
+        .room-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .room-info { flex: 1; }
+        .room-name {
+            font-family: 'Syne', sans-serif; font-weight: 700;
+            font-size: 16px; letter-spacing: -0.3px; text-transform: capitalize;
+            color: var(--accent2);
         }
+        .room-status { font-size: 12px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 5px; }
+        .online-dot { width: 7px; height: 7px; background: #4ade80; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-        /* ── Messages ── */
+        /* Username badge */
+        .you-badge {
+            display: flex; align-items: center; gap: 10px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 20px; padding: 7px 16px;
+        }
+        .avatar-circle {
+            width: 28px; height: 28px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent3), var(--accent2));
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Syne', sans-serif; font-weight: 700;
+            font-size: 12px; color: white; flex-shrink: 0;
+        }
+        .you-name { font-size: 13px; color: var(--text); font-weight: 500; }
+
+        /* Messages */
         .messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            scroll-behavior: smooth;
+            flex: 1; overflow-y: auto; padding: 20px 24px;
+            display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth;
         }
-
         .messages::-webkit-scrollbar { width: 4px; }
         .messages::-webkit-scrollbar-track { background: transparent; }
         .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
         .message-row {
-            display: flex;
-            flex-direction: column;
-            max-width: 65%;
-            animation: msgIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+            display: flex; flex-direction: column; max-width: 65%;
+            animation: msgIn 0.25s cubic-bezier(0.16,1,0.3,1) both;
         }
-
         @keyframes msgIn {
             from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
         .message-row.mine { align-self: flex-end; align-items: flex-end; }
         .message-row.theirs { align-self: flex-start; align-items: flex-start; }
 
-        .msg-author {
-            font-size: 11px;
-            font-weight: 500;
-            color: var(--muted);
-            margin-bottom: 4px;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
+        .msg-header { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+        .msg-avatar {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent3), var(--accent2));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: 700; color: white; flex-shrink: 0;
         }
+        .msg-author { font-size: 12px; font-weight: 500; color: var(--accent2); letter-spacing: 0.03em; }
+        .msg-time-top { font-size: 10px; color: var(--muted); }
 
         .bubble {
-            padding: 11px 16px;
-            border-radius: 18px;
-            font-size: 14px;
-            line-height: 1.5;
-            max-width: 100%;
-            word-break: break-word;
+            padding: 11px 16px; border-radius: 18px;
+            font-size: 14px; line-height: 1.5; word-break: break-word;
         }
-
         .mine .bubble {
-            background: var(--accent);
-            color: white;
+            background: var(--accent); color: white;
             border-bottom-right-radius: 5px;
         }
-
         .theirs .bubble {
-            background: var(--bubble-in);
-            border: 1px solid var(--border);
+            background: var(--surface2); border: 1px solid var(--border);
             border-bottom-left-radius: 5px;
         }
 
-        .msg-time {
-            font-size: 10px;
-            color: var(--muted);
-            margin-top: 4px;
-        }
-
-        /* system message */
         .system-msg {
-            align-self: center;
-            font-size: 12px;
-            color: var(--muted);
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            padding: 5px 14px;
-            border-radius: 20px;
+            align-self: center; font-size: 12px; color: var(--muted);
+            background: var(--surface2); border: 1px solid var(--border);
+            padding: 5px 14px; border-radius: 20px;
         }
 
-        /* ── Input ── */
+        /* Disconnected */
+        .disconnected {
+            display: none; background: rgba(255,100,100,0.1);
+            border-bottom: 1px solid rgba(255,100,100,0.3);
+            color: #ff8080; text-align: center; padding: 8px; font-size: 13px;
+        }
+
+        /* Input */
         .input-area {
-            padding: 16px 24px;
-            background: var(--surface);
+            padding: 14px 24px; background: var(--surface);
             border-top: 1px solid var(--border);
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-shrink: 0;
+            display: flex; gap: 12px; align-items: center; flex-shrink: 0;
         }
-
         #message-input {
-            flex: 1;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 13px 18px;
-            color: var(--text);
-            font-family: 'DM Sans', sans-serif;
-            font-size: 14px;
-            outline: none;
+            flex: 1; background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 14px; padding: 13px 18px; color: var(--text);
+            font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
-
         #message-input:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(124, 106, 255, 0.12);
+            box-shadow: 0 0 0 3px rgba(42,157,143,0.15);
         }
-
         #message-input::placeholder { color: var(--muted); }
-
         #send-btn {
             width: 46px; height: 46px;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            border: none;
-            border-radius: 13px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
+            background: linear-gradient(135deg, var(--accent3), var(--accent2));
+            border: none; border-radius: 13px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 18px; color: white;
             transition: opacity 0.2s, transform 0.1s;
-            font-size: 18px;
         }
-
         #send-btn:hover { opacity: 0.9; transform: scale(1.05); }
         #send-btn:active { transform: scale(0.97); }
-
-        /* disconnected banner */
-        .disconnected {
-            display: none;
-            background: #ff6a9a22;
-            border: 1px solid var(--accent2);
-            color: var(--accent2);
-            text-align: center;
-            padding: 8px;
-            font-size: 13px;
-        }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="room-avatar">💬</div>
+        <div class="room-avatar">
+            <img src="{% static 'chat/stamp.png' %}" alt="Group Icon" onerror="this.parentElement.textContent='🤝'" />
+        </div>
         <div class="room-info">
             <div class="room-name"># {{ room_name }}</div>
             <div class="room-status">
@@ -247,12 +156,13 @@
                 <span id="status-text">Connected</span>
             </div>
         </div>
-        <div class="you-badge">You: <span>{{ username }}</span></div>
+        <div class="you-badge">
+            <div class="avatar-circle" id="user-initial"></div>
+            <span class="you-name">{{ username }}</span>
+        </div>
     </div>
 
-    <div class="disconnected" id="disconnected-banner">
-        ⚠️ Disconnected from server. Please refresh.
-    </div>
+    <div class="disconnected" id="disconnected-banner">⚠️ Disconnected. Please refresh.</div>
 
     <div class="messages" id="messages">
         <div class="system-msg">You joined <strong>#{{ room_name }}</strong></div>
@@ -267,6 +177,9 @@
         const roomName = "{{ room_name }}";
         const username = "{{ username }}";
 
+        // set avatar initial
+        document.getElementById('user-initial').textContent = username.charAt(0).toUpperCase();
+
         const socket = new WebSocket(`ws://${window.location.host}/ws/chat/${roomName}/`);
         const messagesEl = document.getElementById('messages');
 
@@ -274,15 +187,29 @@
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
+        // generate a consistent teal shade per username for avatars
+        function userColor(name) {
+            const colors = ['#2a9d8f','#4cc9b0','#1a7a6e','#38b2a0','#56d4bc'];
+            let hash = 0;
+            for (let c of name) hash = c.charCodeAt(0) + hash * 31;
+            return colors[Math.abs(hash) % colors.length];
+        }
+
         function addMessage(msg, user) {
             const isMine = user === username;
             const row = document.createElement('div');
             row.classList.add('message-row', isMine ? 'mine' : 'theirs');
 
+            const initial = user.charAt(0).toUpperCase();
+            const color = userColor(user);
+
             row.innerHTML = `
-                ${!isMine ? `<div class="msg-author">${user}</div>` : ''}
+                <div class="msg-header">
+                    <div class="msg-avatar" style="background:${color}">${initial}</div>
+                    <span class="msg-author">${user}</span>
+                    <span class="msg-time-top">${getTime()}</span>
+                </div>
                 <div class="bubble">${msg}</div>
-                <div class="msg-time">${getTime()}</div>
             `;
 
             messagesEl.appendChild(row);
@@ -308,7 +235,7 @@
         }
 
         document.getElementById('send-btn').onclick = sendMessage;
-        document.getElementById('message-input').addEventListener('keypress', function(e) {
+        document.getElementById('message-input').addEventListener('keypress', e => {
             if (e.key === 'Enter') sendMessage();
         });
     </script>

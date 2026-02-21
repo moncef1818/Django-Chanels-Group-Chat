@@ -176,56 +176,97 @@
     <script>
         const roomName = "{{ room_name }}";
         const username = "{{ username }}";
-
-        // set avatar initial
+            
         document.getElementById('user-initial').textContent = username.charAt(0).toUpperCase();
-
-        const socket = new WebSocket(`ws://${window.location.host}/ws/chat/${roomName}/`);
+            
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        const socket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/${roomName}/`);
         const messagesEl = document.getElementById('messages');
-
+            
+        let oldestMessageId = null;
+        let isLoadingMore = false;
+            
         function getTime() {
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
-
-        // generate a consistent teal shade per username for avatars
+        
         function userColor(name) {
             const colors = ['#2a9d8f','#4cc9b0','#1a7a6e','#38b2a0','#56d4bc'];
             let hash = 0;
             for (let c of name) hash = c.charCodeAt(0) + hash * 31;
             return colors[Math.abs(hash) % colors.length];
         }
-
-        function addMessage(msg, user) {
+        
+        function addMessage(msg, user, timestamp, id, prepend=false) {
             const isMine = user === username;
             const row = document.createElement('div');
             row.classList.add('message-row', isMine ? 'mine' : 'theirs');
-
+            if (id) row.dataset.id = id;
+        
             const initial = user.charAt(0).toUpperCase();
             const color = userColor(user);
-
+        
             row.innerHTML = `
                 <div class="msg-header">
                     <div class="msg-avatar" style="background:${color}">${initial}</div>
                     <span class="msg-author">${user}</span>
-                    <span class="msg-time-top">${getTime()}</span>
+                    <span class="msg-time-top">${timestamp || getTime()}</span>
                 </div>
                 <div class="bubble">${msg}</div>
             `;
-
-            messagesEl.appendChild(row);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+            
+            if (prepend) {
+                messagesEl.insertBefore(row, messagesEl.firstChild);
+            } else {
+                messagesEl.appendChild(row);
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+        
+            return row;
         }
-
+        
         socket.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            addMessage(data.message, data.username);
+        
+            // handle history (load more)
+            if (data.type === 'history') {
+                if (data.messages.length === 0) return;
+                const prevHeight = messagesEl.scrollHeight;
+                data.messages.forEach(m => {
+                    const row = addMessage(m.message, m.username, m.timestamp, m.id, true);
+                });
+                // keep scroll position stable
+                messagesEl.scrollTop = messagesEl.scrollHeight - prevHeight;
+                if (data.messages.length > 0) {
+                    oldestMessageId = data.messages[0].id;
+                }
+                isLoadingMore = false;
+                return;
+            }
+        
+            // normal incoming message
+            const row = addMessage(data.message, data.username, data.timestamp, data.id);
+            if (data.id && (!oldestMessageId)) {
+                oldestMessageId = data.id;
+            }
         };
-
+        
         socket.onclose = function() {
             document.getElementById('disconnected-banner').style.display = 'block';
             document.getElementById('status-text').textContent = 'Disconnected';
         };
-
+        
+        // infinite scroll — load more when scrolled to top
+        messagesEl.addEventListener('scroll', function() {
+            if (messagesEl.scrollTop === 0 && !isLoadingMore && oldestMessageId) {
+                isLoadingMore = true;
+                socket.send(JSON.stringify({
+                    type: 'load_more',
+                    oldest_id: oldestMessageId,
+                }));
+            }
+        });
+        
         function sendMessage() {
             const input = document.getElementById('message-input');
             const msg = input.value.trim();
@@ -233,7 +274,7 @@
             socket.send(JSON.stringify({ message: msg, username: username }));
             input.value = '';
         }
-
+        
         document.getElementById('send-btn').onclick = sendMessage;
         document.getElementById('message-input').addEventListener('keypress', e => {
             if (e.key === 'Enter') sendMessage();

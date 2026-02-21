@@ -17,6 +17,7 @@ idna==3.11
 Incremental==24.11.0
 msgpack==1.1.2
 packaging==26.0
+psycopg2-binary==2.9.11
 py-ubjson==0.16.1
 pyasn1==0.6.2
 pyasn1_modules==0.4.2

@@ -4,10 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ room_name }} — التعاضديت</title>
+    <title>{{ room_name|escapejs }} — التعاضديت</title>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-    {% load static %}
-    <style>
+<style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
             --bg: #051a1a; --surface: #0a2a2a; --surface2: #0f3535;
@@ -144,7 +143,7 @@
     </style>
 </head>
 <body>
-
+    <!-- Your HTML structure unchanged -->
     <div class="header">
         <div class="room-avatar">
             <img src="{% static 'chat/stamp.png' %}" alt="Group Icon" onerror="this.parentElement.textContent='🤝'" />
@@ -163,29 +162,28 @@
     </div>
 
     <div class="disconnected" id="disconnected-banner">⚠️ Disconnected. Please refresh.</div>
-
     <div class="messages" id="messages">
         <div class="system-msg">You joined <strong>#{{ room_name }}</strong></div>
     </div>
-
     <div class="input-area">
-        <input type="text" id="message-input" placeholder="Message #{{ room_name }}..." autofocus />
+        <input type="text" id="message-input" placeholder="Message #{{ room_name }}..." autofocus maxlength="500" />
         <button id="send-btn">➤</button>
     </div>
 
     <script>
-        const roomName = "{{ room_name }}";
-        const username = "{{ username }}";
-            
+        // ✅ SECURE: Use Django's auto-escaped variables
+        const roomName = "{{ room_name|escapejs }}";
+        const username = "{{ username|escapejs }}";
+        
         document.getElementById('user-initial').textContent = username.charAt(0).toUpperCase();
-            
+        
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const socket = new WebSocket(`${protocol}://${window.location.host}/ws/chat/${roomName}/`);
         const messagesEl = document.getElementById('messages');
-            
+        
         let oldestMessageId = null;
         let isLoadingMore = false;
-            
+        
         function getTime() {
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
@@ -197,22 +195,33 @@
             return colors[Math.abs(hash) % colors.length];
         }
         
+        // ✅ FIXED: XSS #1 - Sanitize all incoming messages
+        function sanitizeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+        
         function addMessage(msg, user, timestamp, id, prepend=false) {
             const isMine = user === username;
             const row = document.createElement('div');
             row.classList.add('message-row', isMine ? 'mine' : 'theirs');
             if (id) row.dataset.id = id;
-        
+            
             const initial = user.charAt(0).toUpperCase();
             const color = userColor(user);
-        
+            
+            // ✅ FIXED: XSS #2 - Escape user/message content
+            const safeMsg = sanitizeHTML(msg);
+            const safeUser = sanitizeHTML(user);
+            
             row.innerHTML = `
                 <div class="msg-header">
                     <div class="msg-avatar" style="background:${color}">${initial}</div>
-                    <span class="msg-author">${user}</span>
+                    <span class="msg-author">${safeUser}</span>
                     <span class="msg-time-top">${timestamp || getTime()}</span>
                 </div>
-                <div class="bubble">${msg}</div>
+                <div class="bubble">${safeMsg}</div>
             `;
             
             if (prepend) {
@@ -221,21 +230,24 @@
                 messagesEl.appendChild(row);
                 messagesEl.scrollTop = messagesEl.scrollHeight;
             }
-        
             return row;
         }
         
         socket.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-        
-            // handle history (load more)
+            let data;
+            try {
+                data = JSON.parse(event.data);
+            } catch(e) {
+                console.error('Invalid JSON received');
+                return;
+            }
+            
             if (data.type === 'history') {
-                if (data.messages.length === 0) return;
+                if (!data.messages || data.messages.length === 0) return;
                 const prevHeight = messagesEl.scrollHeight;
                 data.messages.forEach(m => {
-                    const row = addMessage(m.message, m.username, m.timestamp, m.id, true);
+                    addMessage(m.message, m.username, m.timestamp, m.id, true);
                 });
-                // keep scroll position stable
                 messagesEl.scrollTop = messagesEl.scrollHeight - prevHeight;
                 if (data.messages.length > 0) {
                     oldestMessageId = data.messages[0].id;
@@ -243,9 +255,9 @@
                 isLoadingMore = false;
                 return;
             }
-        
-            // normal incoming message
-            const row = addMessage(data.message, data.username, data.timestamp, data.id);
+            
+            // Normal message - already sanitized by addMessage()
+            addMessage(data.message, data.username, data.timestamp, data.id);
             if (data.id && (!oldestMessageId)) {
                 oldestMessageId = data.id;
             }
@@ -256,7 +268,6 @@
             document.getElementById('status-text').textContent = 'Disconnected';
         };
         
-        // infinite scroll — load more when scrolled to top
         messagesEl.addEventListener('scroll', function() {
             if (messagesEl.scrollTop === 0 && !isLoadingMore && oldestMessageId) {
                 isLoadingMore = true;
@@ -271,6 +282,10 @@
             const input = document.getElementById('message-input');
             const msg = input.value.trim();
             if (!msg) return;
+            
+            // Client-side validation
+            if (msg.length > 500) return;
+            
             socket.send(JSON.stringify({ message: msg, username: username }));
             input.value = '';
         }
@@ -279,6 +294,12 @@
         document.getElementById('message-input').addEventListener('keypress', e => {
             if (e.key === 'Enter') sendMessage();
         });
+        
+        // ✅ ADDED: Connection status
+        socket.onopen = function() {
+            document.getElementById('status-text').textContent = 'Connected';
+            document.getElementById('disconnected-banner').style.display = 'none';
+        };
     </script>
 </body>
 </html>

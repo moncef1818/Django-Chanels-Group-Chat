@@ -1,4 +1,7 @@
 from django.db import models
+import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+
 
 class Room(models.Model):
     name = models.CharField(max_length=100, unique=True)
